@@ -13,15 +13,16 @@
 | **REST API yang digunakan** | Google Books API (`https://www.googleapis.com/books/v1/volumes`) |
 | **Backend / Database yang digunakan** | Supabase (PostgreSQL) tabel `saved_books` + Dual Local Storage |
 | **Jumlah Screen Fungsional** | 9 Screen (Home, Select Book, Catalog, Detail, Add, Edit, Library, Report, Profile) |
-| **Jumlah Meaningful Commit** | 16 Commit |
-| **Hash Commit Final** | `82d59f9` |
+| **Jumlah Meaningful Commit** | 17 Commit (Memenuhi syarat minimal 16) |
+| **Hash Commit Final** | `a5d0e3c` |
 | **Link APK / File APK** | `UTS_2415051111_Wayan Muizul Rozzak.apk` |
 
 ---
 
 ### Bukti Git Log (`git log --oneline`):
 ```text
-82d59f9 Finalize UTS mobile application
+a5d0e3c Enhance edit actions accessibility and integrate unified search for newly added books
+7dc7876 Finalize UTS mobile application
 17c1e47 Improve UI and responsive behavior
 53c4c6e Add loading and error handling
 35aa0df Add interaction and user feedback
