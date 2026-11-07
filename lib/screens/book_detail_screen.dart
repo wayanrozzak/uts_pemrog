@@ -45,6 +45,7 @@ class BookDetailScreen extends StatelessWidget {
     }
 
     final isAlreadySaved = currentSavedBook != null;
+    final savedForAction = currentSavedBook;
 
     final title = currentSavedBook?.title ?? apiBook?.title ?? '';
     final author = currentSavedBook?.author ?? apiBook?.authorNames ?? '';
@@ -60,12 +61,22 @@ class BookDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Detail Buku'),
         actions: [
-          if (isAlreadySaved)
+          if (savedForAction != null) ...[
+            IconButton(
+              icon: const Icon(Icons.edit_note_rounded, size: 26, color: AppColors.primaryLight),
+              tooltip: 'Edit Buku & Catatan',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => EditBookScreen(book: savedForAction)),
+                );
+              },
+            ),
             IconButton(
               icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
               tooltip: 'Hapus dari Rak',
-              onPressed: () => _confirmDelete(context, currentSavedBook!, libraryProvider),
+              onPressed: () => _confirmDelete(context, savedForAction, libraryProvider),
             ),
+          ],
         ],
       ),
       body: SingleChildScrollView(
@@ -220,8 +231,36 @@ class BookDetailScreen extends StatelessWidget {
             ),
           ),
           if (saved != null) ...[
-            const SizedBox(height: 10),
-            BookStatusBadge(status: saved.status),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                BookStatusBadge(status: saved.status),
+                const SizedBox(width: 10),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => EditBookScreen(book: saved)),
+                    );
+                  },
+                  icon: const Icon(Icons.edit_note_rounded, size: 16, color: AppColors.primaryLight),
+                  label: const Text(
+                    'Edit Buku',
+                    style: TextStyle(
+                      color: AppColors.primaryLight,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    minimumSize: const Size(0, 32),
+                    side: const BorderSide(color: AppColors.primaryLight, width: 1),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+              ],
+            ),
           ],
         ],
       ),
@@ -376,8 +415,8 @@ class BookDetailScreen extends StatelessWidget {
                   MaterialPageRoute(builder: (_) => EditBookScreen(book: saved)),
                 );
               },
-              icon: const Icon(Icons.edit_rounded, size: 18),
-              label: const Text('Update Progress & Catatan'),
+              icon: const Icon(Icons.edit_note_rounded, size: 20),
+              label: const Text('Edit Buku & Update Progress'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(vertical: 14),

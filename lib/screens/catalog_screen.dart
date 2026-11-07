@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/book.dart';
+import '../models/saved_book.dart';
 import '../providers/book_provider.dart';
+import '../providers/library_provider.dart';
 import '../utils/app_colors.dart';
+import '../widgets/book_status_badge.dart';
 import 'add_book_screen.dart';
 import 'book_detail_screen.dart';
+import 'edit_book_screen.dart';
 
 /// SCREEN 3: Catalog / Explore Screen
 /// Mengintegrasikan REST API (Google Books API) secara langsung:
 /// - Operasi HTTP GET
 /// - Menampilkan buku dari JSON response yang dikonversi ke Dart Model (Book)
 /// - Memiliki Loading State, Error State (dengan retry), dan Empty State
-/// - Pencarian dinamis & Filter kategori
+/// - Pencarian terintegrasi: Mencari ke Rak Buku Lokal & Katalog Online Google Books
 /// - Layout responsif (Compact 2 kolom / Wide 4 kolom)
 class CatalogScreen extends StatefulWidget {
   const CatalogScreen({super.key});
@@ -44,6 +48,18 @@ class _CatalogScreenState extends State<CatalogScreen> {
   @override
   Widget build(BuildContext context) {
     final bookProvider = context.watch<BookProvider>();
+    final libraryProvider = context.watch<LibraryProvider>();
+
+    final query = _searchController.text.trim().toLowerCase();
+    // Buku dari rak lokal pengguna yang cocok dengan pencarian
+    final savedMatches = query.isNotEmpty
+        ? libraryProvider.savedBooks
+            .where((b) =>
+                b.title.toLowerCase().contains(query) ||
+                b.author.toLowerCase().contains(query) ||
+                b.note.toLowerCase().contains(query))
+            .toList()
+        : <SavedBook>[];
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -77,19 +93,21 @@ class _CatalogScreenState extends State<CatalogScreen> {
             child: TextField(
               controller: _searchController,
               style: const TextStyle(color: AppColors.textPrimary),
+              onChanged: (_) => setState(() {}),
               onSubmitted: (value) {
                 if (value.trim().isNotEmpty) {
                   bookProvider.fetchBooks(query: value.trim());
                 }
               },
               decoration: InputDecoration(
-                hintText: 'Cari judul, pengarang di Google Books API...',
+                hintText: 'Cari judul, pengarang di Rak & Google Books...',
                 prefixIcon: const Icon(Icons.search, color: AppColors.primaryLight),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear, color: AppColors.textMuted),
                         onPressed: () {
                           _searchController.clear();
+                          setState(() {});
                           bookProvider.fetchBooks(query: 'bestseller');
                         },
                       )
@@ -109,9 +127,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
           _buildCategoryChips(bookProvider),
           const SizedBox(height: 8),
 
-          // Main Content: Loading, Error, Empty, or Data
+          // Main Content: Local Saved Matches + Online API Results
           Expanded(
-            child: _buildBodyContent(bookProvider),
+            child: _buildBodyContent(bookProvider, savedMatches),
           ),
         ],
       ),
@@ -159,9 +177,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
     );
   }
 
-  Widget _buildBodyContent(BookProvider provider) {
+  Widget _buildBodyContent(BookProvider provider, List<SavedBook> savedMatches) {
     // 1. Loading State
-    if (provider.isLoading) {
+    if (provider.isLoading && savedMatches.isEmpty) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -178,7 +196,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
     }
 
     // 2. Error State
-    if (provider.hasError) {
+    if (provider.hasError && savedMatches.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -204,8 +222,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
       );
     }
 
-    // 3. Empty State
-    if (provider.books.isEmpty) {
+    // 3. Empty State (jika API kosong dan di rak juga kosong)
+    if (provider.books.isEmpty && savedMatches.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -220,6 +238,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
             OutlinedButton(
               onPressed: () {
                 _searchController.clear();
+                setState(() {});
                 provider.fetchBooks(query: 'bestseller');
               },
               child: const Text('Tampilkan Buku Populer'),
@@ -229,39 +248,176 @@ class _CatalogScreenState extends State<CatalogScreen> {
       );
     }
 
-    // 4. Data State (Responsif Grid atau List)
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (_isGridView) {
-          final crossAxisCount = constraints.maxWidth > 900
-              ? 5
-              : (constraints.maxWidth > 600 ? 4 : 2);
-
-          return GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              childAspectRatio: 0.65,
-              crossAxisSpacing: 14,
-              mainAxisSpacing: 14,
+    // 4. Data State: Tampilkan hasil pencarian dari Rak Buku Anda (jika ada) + Hasil API
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Bagian Buku dari Rak Anda (Jika sedang mencari dan ada kecocokan)
+        if (savedMatches.isNotEmpty) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.4), width: 1.2),
             ),
-            itemCount: provider.books.length,
-            itemBuilder: (context, index) {
-              final book = provider.books[index];
-              return _buildApiBookGridCard(context, book);
-            },
-          );
-        }
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '📚 Di Rak Buku Anda (${savedMatches.length} ditemukan)',
+                      style: const TextStyle(
+                        color: AppColors.primaryLight,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Text(
+                      'Tersimpan',
+                      style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                ...savedMatches.map((saved) => _buildSavedBookTile(context, saved)),
+              ],
+            ),
+          ),
+          if (provider.books.isNotEmpty)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: Text(
+                '🌐 Hasil Dari Google Books API',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+        ],
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: provider.books.length,
-          itemBuilder: (context, index) {
-            final book = provider.books[index];
-            return _buildApiBookListCard(context, book);
-          },
-        );
-      },
+        // Bagian Hasil API (Grid atau List)
+        if (provider.books.isNotEmpty)
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (_isGridView) {
+                final crossAxisCount = constraints.maxWidth > 900
+                    ? 5
+                    : (constraints.maxWidth > 600 ? 4 : 2);
+
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    childAspectRatio: 0.65,
+                    crossAxisSpacing: 14,
+                    mainAxisSpacing: 14,
+                  ),
+                  itemCount: provider.books.length,
+                  itemBuilder: (context, index) {
+                    final book = provider.books[index];
+                    return _buildApiBookGridCard(context, book);
+                  },
+                );
+              }
+
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: provider.books.length,
+                itemBuilder: (context, index) {
+                  final book = provider.books[index];
+                  return _buildApiBookListCard(context, book);
+                },
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  /// Tile untuk buku tersimpan di rak lokal pengguna dengan tombol Edit langsung
+  Widget _buildSavedBookTile(BuildContext context, SavedBook saved) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLight,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: SizedBox(
+              width: 42,
+              height: 60,
+              child: saved.coverUrl.isNotEmpty
+                  ? Image.network(
+                      saved.coverUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.book, color: AppColors.primaryLight),
+                    )
+                  : const Icon(Icons.book, color: AppColors.primaryLight),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  saved.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  saved.author,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                ),
+                const SizedBox(height: 4),
+                BookStatusBadge(status: saved.status),
+              ],
+            ),
+          ),
+          // Tombol Edit Buku
+          IconButton(
+            icon: const Icon(Icons.edit_note_rounded, color: AppColors.primaryLight, size: 24),
+            tooltip: 'Edit Buku Ini',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => EditBookScreen(book: saved)),
+              );
+            },
+          ),
+          // Tombol Detail
+          IconButton(
+            icon: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+            tooltip: 'Lihat Detail',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => BookDetailScreen(savedBook: saved)),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 

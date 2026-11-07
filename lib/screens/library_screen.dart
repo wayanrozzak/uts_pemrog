@@ -34,17 +34,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final provider = context.watch<LibraryProvider>();
     final allBooks = provider.savedBooks;
 
-    // Filter list
+    // Filter list: jika sedang mencari, cari di SELURUH buku agar buku yang baru ditambahkan langsung muncul
     var displayList = allBooks;
-    if (_activeFilter != 'all') {
-      displayList = displayList.where((b) => b.status == _activeFilter).toList();
-    }
-
     if (_searchController.text.trim().isNotEmpty) {
       final q = _searchController.text.trim().toLowerCase();
-      displayList = displayList
-          .where((b) => b.title.toLowerCase().contains(q) || b.author.toLowerCase().contains(q))
+      displayList = allBooks
+          .where((b) =>
+              b.title.toLowerCase().contains(q) ||
+              b.author.toLowerCase().contains(q) ||
+              b.note.toLowerCase().contains(q))
           .toList();
+    } else if (_activeFilter != 'all') {
+      displayList = displayList.where((b) => b.status == _activeFilter).toList();
     }
 
     return Scaffold(

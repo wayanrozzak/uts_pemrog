@@ -7,16 +7,31 @@ import '../widgets/book_card_widget.dart';
 import '../widgets/last_read_card_widget.dart';
 import 'add_book_screen.dart';
 import 'book_detail_screen.dart';
+import 'edit_book_screen.dart';
 import 'select_book_screen.dart';
 
 /// SCREEN 1: Home Dashboard
 /// Mereplikasi secara persis UI foto sisi kiri referensi UTS:
 /// - Header: "+ Add new book" button
-/// - Section: "Your Last Read Book" (dengan cover, waktu baca, dan progress bar oranye)
+/// - Section: "Your Last Read Book" (dengan cover, waktu baca, tombol Edit & Change, progress bar)
+/// - Pencarian cepat buku di rak
 /// - Section: "Other Books" dengan filter status (Currently Reading, For Reading, Read)
 /// - Responsive layout (Compact vs Wide)
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +70,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  /// Layout Compact (Mobile < 650px) - Persis seperti foto kiri!
+  /// Layout Compact (Mobile < 850px) - Persis seperti foto kiri
   Widget _buildCompactLayout(
     BuildContext context, {
     required SavedBook? activeBook,
@@ -72,29 +87,35 @@ class HomeScreen extends StatelessWidget {
         children: [
           // Top Header Bar
           _buildTopHeader(context),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
           // Section 1: Your Last Read Book
           _buildLastReadSection(context, activeBook),
-          const SizedBox(height: 28),
+          const SizedBox(height: 24),
+
+          // Search Bar di Home Screen
+          _buildSearchBar(libraryProvider),
+          const SizedBox(height: 20),
 
           // Section 2: Other Books
-          _buildOtherBooksHeader(context),
-          const SizedBox(height: 14),
+          _buildOtherBooksHeader(context, libraryProvider),
+          const SizedBox(height: 12),
 
-          // Filter Tabs (Currently Reading, For Reading, Read)
-          _buildFilterTabs(context, currentTab, libraryProvider),
-          const SizedBox(height: 16),
+          // Filter Tabs (Hanya ditampilkan jika tidak sedang mencari)
+          if (libraryProvider.searchQuery.trim().isEmpty) ...[
+            _buildFilterTabs(context, currentTab, libraryProvider),
+            const SizedBox(height: 16),
+          ],
 
           // List of Other Books
-          _buildOtherBooksList(context, filteredBooks, activeBook),
+          _buildOtherBooksList(context, filteredBooks, activeBook, libraryProvider),
           const SizedBox(height: 24),
         ],
       ),
     );
   }
 
-  /// Layout Wide (Tablet / Desktop >= 650px) - Memenuhi spesifikasi responsif UTS
+  /// Layout Wide (Tablet / Desktop >= 850px)
   Widget _buildWideLayout(
     BuildContext context, {
     required SavedBook? activeBook,
@@ -107,7 +128,9 @@ class HomeScreen extends StatelessWidget {
       child: Column(
         children: [
           _buildTopHeader(context),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
+          _buildSearchBar(libraryProvider),
+          const SizedBox(height: 20),
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,12 +153,19 @@ class HomeScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildOtherBooksHeader(context),
+                      _buildOtherBooksHeader(context, libraryProvider),
                       const SizedBox(height: 12),
-                      _buildFilterTabs(context, currentTab, libraryProvider),
-                      const SizedBox(height: 16),
+                      if (libraryProvider.searchQuery.trim().isEmpty) ...[
+                        _buildFilterTabs(context, currentTab, libraryProvider),
+                        const SizedBox(height: 16),
+                      ],
                       Expanded(
-                        child: _buildOtherBooksList(context, filteredBooks, activeBook),
+                        child: _buildOtherBooksList(
+                          context,
+                          filteredBooks,
+                          activeBook,
+                          libraryProvider,
+                        ),
                       ),
                     ],
                   ),
@@ -144,6 +174,38 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Search Bar di Home Screen agar buku baru langsung dapat dicari
+  Widget _buildSearchBar(LibraryProvider provider) {
+    return TextField(
+      controller: _searchController,
+      style: const TextStyle(color: AppColors.textPrimary),
+      onChanged: (val) {
+        provider.setSearchQuery(val);
+      },
+      decoration: InputDecoration(
+        hintText: 'Cari buku di rak buku Anda...',
+        prefixIcon: const Icon(Icons.search, color: AppColors.primaryLight),
+        suffixIcon: _searchController.text.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear, color: AppColors.textMuted),
+                onPressed: () {
+                  _searchController.clear();
+                  provider.setSearchQuery('');
+                  setState(() {});
+                },
+              )
+            : null,
+        filled: true,
+        fillColor: AppColors.surfaceLight,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(24),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }
@@ -229,7 +291,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  /// Section "Your Last Read Book"
+  /// Section "Your Last Read Book" dengan tombol Edit dan Change
   Widget _buildLastReadSection(BuildContext context, SavedBook? activeBook) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -249,25 +311,56 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const SelectBookScreen()),
-                );
-              },
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero,
-                minimumSize: const Size(50, 30),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: const Text(
-                'Change',
-                style: TextStyle(
-                  color: AppColors.primaryLight,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+            Row(
+              children: [
+                if (activeBook != null) ...[
+                  // Tombol Edit Buku Aktif
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => EditBookScreen(book: activeBook),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.edit_note_rounded, size: 16, color: AppColors.primaryLight),
+                    label: const Text(
+                      'Edit',
+                      style: TextStyle(
+                        color: AppColors.primaryLight,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      minimumSize: const Size(40, 30),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                ],
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SelectBookScreen()),
+                    );
+                  },
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(50, 30),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    'Change',
+                    style: TextStyle(
+                      color: AppColors.primaryLight,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -285,6 +378,13 @@ class HomeScreen extends StatelessWidget {
             onChangeBook: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const SelectBookScreen()),
+              );
+            },
+            onEdit: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => EditBookScreen(book: activeBook),
+                ),
               );
             },
           )
@@ -323,7 +423,31 @@ class HomeScreen extends StatelessWidget {
   }
 
   /// Section "Other Books" Header
-  Widget _buildOtherBooksHeader(BuildContext context) {
+  Widget _buildOtherBooksHeader(BuildContext context, LibraryProvider provider) {
+    if (provider.searchQuery.trim().isNotEmpty) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              'Hasil Pencarian "${provider.searchQuery}"',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          Text(
+            '${provider.filteredBooks.length} buku',
+            style: const TextStyle(color: AppColors.primaryLight, fontSize: 12),
+          ),
+        ],
+      );
+    }
+
     return const Text(
       'Other Books',
       style: TextStyle(
@@ -390,9 +514,12 @@ class HomeScreen extends StatelessWidget {
     BuildContext context,
     List<SavedBook> books,
     SavedBook? activeBook,
+    LibraryProvider provider,
   ) {
-    // Kecualikan buku yang sedang aktif ditampilkan di "Your Last Read Book"
-    final displayBooks = books.where((b) => b.id != activeBook?.id).toList();
+    final isSearching = provider.searchQuery.trim().isNotEmpty;
+    // Jika sedang mencari, tampilkan semua buku yang cocok (termasuk activeBook jika judulnya cocok)
+    // Jika tidak sedang mencari, kecualikan buku aktif agar tidak duplikat dengan kartu atas
+    final displayBooks = isSearching ? books : books.where((b) => b.id != activeBook?.id).toList();
 
     if (displayBooks.isEmpty) {
       return Container(
@@ -402,18 +529,27 @@ class HomeScreen extends StatelessWidget {
           children: [
             const Icon(Icons.inbox_outlined, color: AppColors.textMuted, size: 40),
             const SizedBox(height: 10),
-            const Text(
-              'Tidak ada buku pada kategori ini',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            Text(
+              isSearching
+                  ? 'Tidak ada buku yang cocok dengan "${provider.searchQuery}"'
+                  : 'Tidak ada buku pada kategori ini',
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             OutlinedButton(
               onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AddBookScreen()),
-                );
+                if (isSearching) {
+                  _searchController.clear();
+                  provider.setSearchQuery('');
+                  setState(() {});
+                } else {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AddBookScreen()),
+                  );
+                }
               },
-              child: const Text('Tambah Buku Sekarang'),
+              child: Text(isSearching ? 'Hapus Pencarian' : 'Tambah Buku Sekarang'),
             ),
           ],
         ),
@@ -429,10 +565,18 @@ class HomeScreen extends StatelessWidget {
         return BookCardWidget(
           book: book,
           displayMode: BookCardDisplayMode.list,
+          showEditButton: true,
           onTap: () {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => BookDetailScreen(savedBook: book),
+              ),
+            );
+          },
+          onEdit: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => EditBookScreen(book: book),
               ),
             );
           },

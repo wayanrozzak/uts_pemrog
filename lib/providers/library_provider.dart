@@ -28,21 +28,22 @@ class LibraryProvider extends ChangeNotifier {
 
   /// Buku yang difilter sesuai tab yang aktif dan query pencarian
   List<SavedBook> get filteredBooks {
-    var list = _savedBooks;
-
-    // Filter berdasarkan status tab
-    if (_currentTab != 'all') {
-      list = list.where((book) => book.status == _currentTab).toList();
-    }
-
-    // Filter berdasarkan pencarian
+    // Jika sedang dalam pencarian, cari di seluruh buku agar buku yang baru ditambahkan langsung ditemukan
     if (_searchQuery.trim().isNotEmpty) {
       final q = _searchQuery.toLowerCase();
-      list = list
+      return _savedBooks
           .where((book) =>
               book.title.toLowerCase().contains(q) ||
-              book.author.toLowerCase().contains(q))
+              book.author.toLowerCase().contains(q) ||
+              book.note.toLowerCase().contains(q))
           .toList();
+    }
+
+    var list = _savedBooks;
+
+    // Filter berdasarkan status tab jika tidak sedang mencari
+    if (_currentTab != 'all') {
+      list = list.where((book) => book.status == _currentTab).toList();
     }
 
     return list;

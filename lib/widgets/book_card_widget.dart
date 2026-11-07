@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/saved_book.dart';
+import '../screens/edit_book_screen.dart';
 import '../utils/app_colors.dart';
 import 'reading_progress_bar.dart';
 
@@ -11,7 +12,9 @@ class BookCardWidget extends StatelessWidget {
   final SavedBook book;
   final BookCardDisplayMode displayMode;
   final bool isSelected;
+  final bool showEditButton;
   final VoidCallback? onTap;
+  final VoidCallback? onEdit;
   final VoidCallback? onLongPress;
 
   const BookCardWidget({
@@ -19,7 +22,9 @@ class BookCardWidget extends StatelessWidget {
     required this.book,
     this.displayMode = BookCardDisplayMode.list,
     this.isSelected = false,
+    this.showEditButton = true,
     this.onTap,
+    this.onEdit,
     this.onLongPress,
   });
 
@@ -59,15 +64,42 @@ class BookCardWidget extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        book.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              book.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          if (showEditButton)
+                            IconButton(
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              icon: const Icon(
+                                Icons.edit_note_rounded,
+                                color: AppColors.primaryLight,
+                                size: 22,
+                              ),
+                              tooltip: 'Edit Buku',
+                              onPressed: onEdit ??
+                                  () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => EditBookScreen(book: book),
+                                      ),
+                                    );
+                                  },
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Text(
