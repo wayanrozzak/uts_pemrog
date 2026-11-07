@@ -16,7 +16,7 @@ Aplikasi mobile berbasis Flutter dengan tema **BookShelf** (Personal Reading & B
 | **Dosen Pengampu** | Dr. Ir. I Ketut Resika Arthana, S.T., M.Kom |
 | **Teaching Assistant** | Made Yuda Sadewa, S.Pd. |
 | **Tema Project** | BookShelf (Personal Reading & Bookshelf Manager) |
-| **Repository GitHub** | [UTS_2415051111_Wayan Muizul Rozzak](https://github.com/wayanmuizul/UTS_2415051111_Wayan_Muizul_Rozzak) |
+| **Repository GitHub** | [uts_pemrog](https://github.com/wayanrozzak/uts_pemrog) |
 
 ---
 
@@ -196,7 +196,7 @@ File skrip SQL lengkap siap pakai tersedia di [`supabase_schema.sql`](./supabase
 
 1. **Clone Repository**:
    ```bash
-   git clone https://github.com/wayanmuizul/UTS_2415051111_Wayan_Muizul_Rozzak.git
+   git clone https://github.com/wayanrozzak/uts_pemrog.git
    cd bookshelf_uts
    ```
 

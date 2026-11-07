@@ -8,7 +8,7 @@
 | **Kelas** | PTI 5A |
 | **Nama Project** | BookShelf - Mobile Application Mini Project |
 | **Tema Project** | BookShelf (Personal Reading & Bookshelf Manager) |
-| **URL GitHub Repository** | https://github.com/wayanmuizul/UTS_2415051111_Wayan_Muizul_Rozzak |
+| **URL GitHub Repository** | https://github.com/wayanrozzak/uts_pemrog |
 | **Nama Branch Utama** | `master` |
 | **REST API yang digunakan** | Google Books API (`https://www.googleapis.com/books/v1/volumes`) |
 | **Backend / Database yang digunakan** | Supabase (PostgreSQL) tabel `saved_books` + Dual Local Storage |

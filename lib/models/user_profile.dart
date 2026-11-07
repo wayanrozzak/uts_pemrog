@@ -19,6 +19,6 @@ class UserProfile {
     this.dosen = 'Dr. Ir. I Ketut Resika Arthana, S.T., M.Kom',
     this.asisten = 'Made Yuda Sadewa, S.Pd.',
     this.avatarUrl = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200',
-    this.githubUrl = 'https://github.com/wayanmuizul/UTS_2415051111_Wayan_Muizul_Rozzak',
+    this.githubUrl = 'https://github.com/wayanrozzak/uts_pemrog',
   });
 }
